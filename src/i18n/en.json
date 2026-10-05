@@ -112,7 +112,13 @@
     "guardian": "Guardian Angel",
     "guardianSub": "Trip auto-SOS",
     "medicalId": "Medical ID",
-    "medicalIdSub": "Blood · allergies"
+    "medicalIdSub": "Blood · allergies",
+    "dangerZones": "Danger Zones",
+    "dangerZonesSub": "Risk heatmap",
+    "safeZones": "Safe Zones",
+    "safeZonesSub": "Geofence alerts",
+    "nearYou": "Near you",
+    "childSafetySub": "1098 · Missing alert"
   },
   "profile": {
     "title": "Profile",
@@ -165,5 +171,40 @@
     "limits": "Android limits",
     "limitsBody": "Screen-off / background detection depends on your Android version and phone brand battery rules — continuous operation cannot be guaranteed on every phone.",
     "webNote": "This native feature does not run in a browser. Install the Android app and toggle it here. Voice SOS (mic) on the website keeps working as usual."
+  },
+  "helplines": {
+    "title": "Helplines · one tap call",
+    "women": "Women Helpline",
+    "womenDistress": "Women in distress",
+    "police": "Police",
+    "emergency": "Emergency",
+    "child": "Child Helpline",
+    "cyber": "Cyber Crime",
+    "ambulance": "Ambulance"
+  },
+  "fakeCall": {
+    "title": "Fake Call",
+    "sub": "A realistic incoming call to help you leave an uncomfortable situation.",
+    "caller": "Who is calling?",
+    "customName": "Caller name",
+    "customNumber": "Caller number (optional)",
+    "when": "Ring after",
+    "now": "Now",
+    "sec": "{n} sec",
+    "min": "{n} min",
+    "start": "Schedule Fake Call",
+    "scheduled": "Phone will ring in {time}. You can lock the screen or keep using the app.",
+    "cancel": "Cancel",
+    "incoming": "Incoming call",
+    "mobile": "Mobile",
+    "ongoing": "On call",
+    "ended": "Call ended",
+    "duration": "Duration {time}",
+    "back": "Back to Dashboard",
+    "tip": "Keep the app open. The phone rings with sound and vibration like a real call.",
+    "mom": "Mom",
+    "dad": "Dad",
+    "brother": "Brother",
+    "friend": "Friend"
   }
 }
