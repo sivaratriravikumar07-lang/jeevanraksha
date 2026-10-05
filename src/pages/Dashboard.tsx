@@ -179,6 +179,27 @@ const Dashboard = () => {
           <p className="text-xs text-muted-foreground mt-4">{t("dashboard.sosHint")}</p>
         </div>
 
+        {/* Helplines */}
+        <section>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">{t("helplines.title")}</p>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { n: "112", k: "emergency", c: "bg-gradient-emergency text-primary-foreground" },
+              { n: "100", k: "police", c: "bg-gradient-emergency text-primary-foreground" },
+              { n: "181", k: "women", c: "bg-gradient-trust text-secondary-foreground" },
+              { n: "1091", k: "womenDistress", c: "bg-gradient-trust text-secondary-foreground" },
+              { n: "1098", k: "child", c: "bg-gradient-trust text-secondary-foreground" },
+              { n: "108", k: "ambulance", c: "bg-gradient-emergency text-primary-foreground" },
+            ].map((h) => (
+              <a key={h.n} href={`tel:${h.n}`} className={`${h.c} rounded-2xl p-3 text-center shadow-card active:scale-95 transition-transform`}>
+                <Phone className="w-4 h-4 mx-auto mb-1 opacity-90" />
+                <div className="font-extrabold text-lg leading-none">{h.n}</div>
+                <div className="text-[10px] mt-1 leading-tight opacity-95">{t(`helplines.${h.k}`)}</div>
+              </a>
+            ))}
+          </div>
+        </section>
+
         {/* Quick stats */}
         <div className="grid grid-cols-3 gap-3">
           <button onClick={() => navigate("/contacts")} className="p-3 bg-card border border-border rounded-2xl shadow-card text-center hover:border-primary/40">
