@@ -22,6 +22,7 @@ import { Logo } from "@/components/Logo";
 import { useVolumeSOS } from "@/hooks/useVolumeSOS";
 import { vibrate, getCurrentPosition } from "@/lib/emergency";
 import { buildEmergencyMessage, openSmsToAll, type ContactLite } from "@/lib/sms";
+import { useLanguage } from "@/hooks/useLanguage";
 import { readAllPermissions, watchPermissions } from "@/lib/permissions";
 
 
@@ -31,6 +32,7 @@ interface Contact { id: string }
 const Dashboard = () => {
   const { user, signOut, roles } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [contactsCount, setContactsCount] = useState(0);
   const [incidentsCount, setIncidentsCount] = useState(0);
@@ -146,9 +148,9 @@ const Dashboard = () => {
             </div>
           </div>
           <div>
-            <p className="text-sm opacity-80">Hi {profile?.full_name?.split(" ")[0] ?? "there"} 👋</p>
-            <h1 className="text-2xl font-bold mt-0.5">You are protected</h1>
-            <p className="text-sm opacity-80 mt-1">SOS tap chesthe Police 100 ki direct call + contacts ki SMS auto-send avtundi.</p>
+            <p className="text-sm opacity-80">{t("dashboard.greeting",{name: profile?.full_name?.split(" ")[0] ?? ""})}</p>
+            <h1 className="text-2xl font-bold mt-0.5">{t("dashboard.protected")}</h1>
+            <p className="text-sm opacity-80 mt-1">{t("dashboard.sub")}</p>
           </div>
         </div>
       </header>
@@ -164,35 +166,56 @@ const Dashboard = () => {
               <ShieldCheck className="w-5 h-5 text-primary" />
             </span>
             <span className="min-w-0">
-              <span className="block text-sm font-semibold">Full access ivvandi ({permsReady}/5)</span>
-              <span className="block text-xs text-muted-foreground">GPS, mic, camera, notifications — anni real-time ga pani cheyadaniki</span>
+              <span className="block text-sm font-semibold">{t("dashboard.permsTitle",{ready: permsReady})}</span>
+              <span className="block text-xs text-muted-foreground">{t("dashboard.permsSub")}</span>
             </span>
           </button>
         )}
 
         {/* SOS Card */}
         <div className="bg-card border border-border rounded-3xl p-6 shadow-elevated text-center">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Emergency SOS · Police 100</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">{t("dashboard.sosLabel")}</p>
           <SOSButton onTrigger={() => navigate("/emergency")} holdSeconds={5} />
-          <p className="text-xs text-muted-foreground mt-4">5-sec confirm prevents fake SOS. Voice, Sound Shield, tap — all trigger alert.</p>
+          <p className="text-xs text-muted-foreground mt-4">{t("dashboard.sosHint")}</p>
         </div>
+
+        {/* Helplines */}
+        <section>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">{t("helplines.title")}</p>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { n: "112", k: "emergency", c: "bg-gradient-emergency text-primary-foreground" },
+              { n: "100", k: "police", c: "bg-gradient-emergency text-primary-foreground" },
+              { n: "181", k: "women", c: "bg-gradient-trust text-secondary-foreground" },
+              { n: "1091", k: "womenDistress", c: "bg-gradient-trust text-secondary-foreground" },
+              { n: "1098", k: "child", c: "bg-gradient-trust text-secondary-foreground" },
+              { n: "108", k: "ambulance", c: "bg-gradient-emergency text-primary-foreground" },
+            ].map((h) => (
+              <a key={h.n} href={`tel:${h.n}`} className={`${h.c} rounded-2xl p-3 text-center shadow-card active:scale-95 transition-transform`}>
+                <Phone className="w-4 h-4 mx-auto mb-1 opacity-90" />
+                <div className="font-extrabold text-lg leading-none">{h.n}</div>
+                <div className="text-[10px] mt-1 leading-tight opacity-95">{t(`helplines.${h.k}`)}</div>
+              </a>
+            ))}
+          </div>
+        </section>
 
         {/* Quick stats */}
         <div className="grid grid-cols-3 gap-3">
           <button onClick={() => navigate("/contacts")} className="p-3 bg-card border border-border rounded-2xl shadow-card text-center hover:border-primary/40">
             <Users className="w-4 h-4 text-secondary mx-auto mb-1" />
             <div className="text-xl font-bold">{contactsCount}</div>
-            <div className="text-[10px] text-muted-foreground">Contacts</div>
+            <div className="text-[10px] text-muted-foreground">{t("dashboard.contacts")}</div>
           </button>
           <button onClick={() => navigate("/history")} className="p-3 bg-card border border-border rounded-2xl shadow-card text-center hover:border-primary/40">
             <Activity className="w-4 h-4 text-primary mx-auto mb-1" />
             <div className="text-xl font-bold">{incidentsCount}</div>
-            <div className="text-[10px] text-muted-foreground">Incidents</div>
+            <div className="text-[10px] text-muted-foreground">{t("dashboard.incidents")}</div>
           </button>
           <button onClick={() => navigate("/safety-tips")} className="p-3 bg-card border border-border rounded-2xl shadow-card text-center hover:border-primary/40">
             <BookOpen className="w-4 h-4 text-secondary mx-auto mb-1" />
-            <div className="text-xl font-bold">Tips</div>
-            <div className="text-[10px] text-muted-foreground">Safety</div>
+            <div className="text-xl font-bold">{t("dashboard.tips")}</div>
+            <div className="text-[10px] text-muted-foreground">{t("dashboard.safety")}</div>
           </button>
         </div>
 
@@ -201,15 +224,15 @@ const Dashboard = () => {
           <a href="tel:100" className="flex items-center gap-3 p-4 bg-gradient-emergency rounded-2xl shadow-emergency text-primary-foreground">
             <Phone className="w-5 h-5" />
             <div>
-              <div className="font-semibold text-sm">Call Police</div>
+              <div className="font-semibold text-sm">{t("dashboard.callPolice")}</div>
               <div className="text-xs opacity-90">100</div>
             </div>
           </a>
           <button onClick={() => setShowFake(true)} className="flex items-center gap-3 p-4 bg-card border border-border rounded-2xl shadow-card text-left">
             <PhoneCall className="w-5 h-5 text-secondary" />
             <div>
-              <div className="font-semibold text-sm">Fake Call</div>
-              <div className="text-xs text-muted-foreground">Decoy ringer</div>
+              <div className="font-semibold text-sm">{t("dashboard.fakeCall")}</div>
+              <div className="text-xs text-muted-foreground">{t("dashboard.fakeCallSub")}</div>
             </div>
           </button>
         </div>
@@ -223,10 +246,10 @@ const Dashboard = () => {
             <Sparkles className="w-5 h-5" />
           </div>
           <div className="flex-1">
-            <div className="font-semibold text-sm">Ask Raksha AI</div>
-            <div className="text-xs opacity-85">Safety tips, first aid, helplines — anytime</div>
+            <div className="font-semibold text-sm">{t("dashboard.askAi")}</div>
+            <div className="text-xs opacity-85">{t("dashboard.askAiSub")}</div>
           </div>
-          <span className="text-xs font-semibold">Chat →</span>
+          <span className="text-xs font-semibold">{t("dashboard.chat")}</span>
         </button>
 
         {/* Sound Shield — accident / scream detection */}
@@ -243,11 +266,11 @@ const Dashboard = () => {
           <div className="flex items-center gap-3">
             <Mic className="w-5 h-5 text-secondary" />
             <div>
-              <div className="font-semibold text-sm">Mic Permission Test</div>
-              <div className="text-xs text-muted-foreground">Verify before using Voice SOS</div>
+              <div className="font-semibold text-sm">{t("dashboard.micTest")}</div>
+              <div className="text-xs text-muted-foreground">{t("dashboard.micTestSub")}</div>
             </div>
           </div>
-          <span className="text-xs text-secondary font-semibold">Check →</span>
+          <span className="text-xs text-secondary font-semibold">{t("dashboard.check")}</span>
         </button>
 
         {/* Nearby */}
@@ -260,8 +283,8 @@ const Dashboard = () => {
               <Shield className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
-              <div className="font-semibold text-sm">Police Stations</div>
-              <div className="text-xs text-muted-foreground">Vijayawada</div>
+              <div className="font-semibold text-sm">{t("dashboard.police")}</div>
+              <div className="text-xs text-muted-foreground">{t("dashboard.nearYou")}</div>
             </div>
           </button>
           <button
@@ -272,63 +295,63 @@ const Dashboard = () => {
               <Hospital className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
-              <div className="font-semibold text-sm">Hospitals</div>
-              <div className="text-xs text-muted-foreground">Vijayawada</div>
+              <div className="font-semibold text-sm">{t("dashboard.hospitals")}</div>
+              <div className="text-xs text-muted-foreground">{t("dashboard.nearYou")}</div>
             </div>
           </button>
         </div>
 
         {/* New advanced features */}
         <section>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">More protection</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">{t("dashboard.more")}</p>
           <div className="grid grid-cols-2 gap-3">
             <button onClick={() => navigate("/share-location")} className="flex items-center gap-3 p-4 bg-card border border-border rounded-2xl shadow-card text-left hover:border-primary/40">
               <div className="w-10 h-10 rounded-xl bg-gradient-trust flex items-center justify-center shrink-0"><Share2 className="w-5 h-5 text-secondary-foreground" /></div>
-              <div><div className="font-semibold text-sm">Live Share</div><div className="text-xs text-muted-foreground">1-hour link</div></div>
+              <div><div className="font-semibold text-sm">{t("dashboard.liveShare")}</div><div className="text-xs text-muted-foreground">{t("dashboard.liveShareSub")}</div></div>
             </button>
             <button onClick={() => navigate("/journey")} className="flex items-center gap-3 p-4 bg-card border border-border rounded-2xl shadow-card text-left hover:border-primary/40">
               <div className="w-10 h-10 rounded-xl bg-gradient-trust flex items-center justify-center shrink-0"><Navigation className="w-5 h-5 text-secondary-foreground" /></div>
-              <div><div className="font-semibold text-sm">Safe Journey</div><div className="text-xs text-muted-foreground">Route + ETA</div></div>
+              <div><div className="font-semibold text-sm">{t("dashboard.journey")}</div><div className="text-xs text-muted-foreground">{t("dashboard.journeySub")}</div></div>
             </button>
             <button onClick={() => navigate("/women-safety")} className="flex items-center gap-3 p-4 bg-card border border-border rounded-2xl shadow-card text-left hover:border-primary/40">
               <div className="w-10 h-10 rounded-xl bg-gradient-emergency flex items-center justify-center shrink-0"><Heart className="w-5 h-5 text-primary-foreground" /></div>
-              <div><div className="font-semibold text-sm">Women Mode</div><div className="text-xs text-muted-foreground">1091 · Disha</div></div>
+              <div><div className="font-semibold text-sm">{t("dashboard.womenMode")}</div><div className="text-xs text-muted-foreground">1091 · Disha</div></div>
             </button>
             <button onClick={() => navigate("/child-safety")} className="flex items-center gap-3 p-4 bg-card border border-border rounded-2xl shadow-card text-left hover:border-primary/40">
               <div className="w-10 h-10 rounded-xl bg-gradient-trust flex items-center justify-center shrink-0"><Baby className="w-5 h-5 text-secondary-foreground" /></div>
-              <div><div className="font-semibold text-sm">Child Safety</div><div className="text-xs text-muted-foreground">1098 · Missing alert</div></div>
+              <div><div className="font-semibold text-sm">{t("dashboard.childSafety")}</div><div className="text-xs text-muted-foreground">{t("dashboard.childSafetySub")}</div></div>
             </button>
             <button onClick={() => navigate("/offline-sos")} className="flex items-center gap-3 p-4 bg-card border border-border rounded-2xl shadow-card text-left hover:border-primary/40">
               <div className="w-10 h-10 rounded-xl bg-gradient-trust flex items-center justify-center shrink-0"><WifiOff className="w-5 h-5 text-secondary-foreground" /></div>
-              <div><div className="font-semibold text-sm">Offline SOS</div><div className="text-xs text-muted-foreground">No internet</div></div>
+              <div><div className="font-semibold text-sm">{t("dashboard.offlineSos")}</div><div className="text-xs text-muted-foreground">{t("dashboard.offlineSosSub")}</div></div>
             </button>
             <button onClick={() => navigate("/panic-timer")} className="flex items-center gap-3 p-4 bg-card border border-border rounded-2xl shadow-card text-left hover:border-primary/40">
               <div className="w-10 h-10 rounded-xl bg-gradient-emergency flex items-center justify-center shrink-0"><Timer className="w-5 h-5 text-primary-foreground" /></div>
-              <div><div className="font-semibold text-sm">Check-in Timer</div><div className="text-xs text-muted-foreground">Auto-SOS if missed</div></div>
+              <div><div className="font-semibold text-sm">{t("dashboard.checkinTimer")}</div><div className="text-xs text-muted-foreground">{t("dashboard.checkinTimerSub")}</div></div>
             </button>
             <button onClick={() => navigate("/first-aid")} className="flex items-center gap-3 p-4 bg-card border border-border rounded-2xl shadow-card text-left hover:border-primary/40">
               <div className="w-10 h-10 rounded-xl bg-gradient-trust flex items-center justify-center shrink-0"><HeartPulse className="w-5 h-5 text-secondary-foreground" /></div>
-              <div><div className="font-semibold text-sm">First Aid</div><div className="text-xs text-muted-foreground">Life-saving steps</div></div>
+              <div><div className="font-semibold text-sm">{t("dashboard.firstAid")}</div><div className="text-xs text-muted-foreground">{t("dashboard.firstAidSub")}</div></div>
             </button>
             <button onClick={() => navigate("/evidence")} className="flex items-center gap-3 p-4 bg-card border border-border rounded-2xl shadow-card text-left hover:border-primary/40">
               <div className="w-10 h-10 rounded-xl bg-gradient-emergency flex items-center justify-center shrink-0"><Camera className="w-5 h-5 text-primary-foreground" /></div>
-              <div><div className="font-semibold text-sm">Evidence</div><div className="text-xs text-muted-foreground">Photo/video vault</div></div>
+              <div><div className="font-semibold text-sm">{t("dashboard.evidence")}</div><div className="text-xs text-muted-foreground">{t("dashboard.evidenceSub")}</div></div>
             </button>
             <button onClick={() => navigate("/guardian")} className="flex items-center gap-3 p-4 bg-card border border-border rounded-2xl shadow-card text-left hover:border-primary/40">
               <div className="w-10 h-10 rounded-xl bg-gradient-trust flex items-center justify-center shrink-0"><ShieldCheck className="w-5 h-5 text-secondary-foreground" /></div>
-              <div><div className="font-semibold text-sm">Guardian Angel</div><div className="text-xs text-muted-foreground">Trip auto-SOS</div></div>
+              <div><div className="font-semibold text-sm">{t("dashboard.guardian")}</div><div className="text-xs text-muted-foreground">{t("dashboard.guardianSub")}</div></div>
             </button>
             <button onClick={() => navigate("/medical-id")} className="flex items-center gap-3 p-4 bg-card border border-border rounded-2xl shadow-card text-left hover:border-primary/40">
               <div className="w-10 h-10 rounded-xl bg-gradient-emergency flex items-center justify-center shrink-0"><HeartPulse className="w-5 h-5 text-primary-foreground" /></div>
-              <div><div className="font-semibold text-sm">Medical ID</div><div className="text-xs text-muted-foreground">Blood · allergies</div></div>
+              <div><div className="font-semibold text-sm">{t("dashboard.medicalId")}</div><div className="text-xs text-muted-foreground">{t("dashboard.medicalIdSub")}</div></div>
             </button>
             <button onClick={() => navigate("/danger-zones")} className="flex items-center gap-3 p-4 bg-card border border-border rounded-2xl shadow-card text-left hover:border-primary/40">
               <div className="w-10 h-10 rounded-xl bg-gradient-emergency flex items-center justify-center shrink-0"><AlertTriangle className="w-5 h-5 text-primary-foreground" /></div>
-              <div><div className="font-semibold text-sm">Danger Zones</div><div className="text-xs text-muted-foreground">Risk heatmap</div></div>
+              <div><div className="font-semibold text-sm">{t("dashboard.dangerZones")}</div><div className="text-xs text-muted-foreground">{t("dashboard.dangerZonesSub")}</div></div>
             </button>
             <button onClick={() => navigate("/safe-zones")} className="flex items-center gap-3 p-4 bg-card border border-border rounded-2xl shadow-card text-left hover:border-primary/40">
               <div className="w-10 h-10 rounded-xl bg-gradient-trust flex items-center justify-center shrink-0"><MapPinned className="w-5 h-5 text-secondary-foreground" /></div>
-              <div><div className="font-semibold text-sm">Safe Zones</div><div className="text-xs text-muted-foreground">Geofence alerts</div></div>
+              <div><div className="font-semibold text-sm">{t("dashboard.safeZones")}</div><div className="text-xs text-muted-foreground">{t("dashboard.safeZonesSub")}</div></div>
             </button>
             <button onClick={() => navigate("/calculator")} className="flex items-center gap-3 p-4 bg-card border border-border rounded-2xl shadow-card text-left hover:border-primary/40">
               <div className="w-10 h-10 rounded-xl bg-gradient-trust flex items-center justify-center shrink-0"><CalcIcon className="w-5 h-5 text-secondary-foreground" /></div>

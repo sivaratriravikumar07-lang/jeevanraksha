@@ -1,19 +1,69 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Phone, PhoneOff, User, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useLanguage } from "@/hooks/useLanguage";
 
-const CALLERS = [
-  { name: "Dad", number: "+91 98XXX XXXXX" },
-  { name: "Mom", number: "+91 99XXX XXXXX" },
-  { name: "Brother", number: "+91 97XXX XXXXX" },
-  { name: "Friend", number: "+91 96XXX XXXXX" },
-];
+const PRESETS = ["mom", "dad", "brother", "friend"] as const;
+const DELAYS = [0, 10, 30, 60, 300];
+const SAVE_KEY = "jr_fake_caller";
+
+/** Simple phone-like ringtone generated with Web Audio (no files needed). */
+function startRingtone() {
+  const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  if (!Ctx) return () => {};
+  const ctx = new Ctx();
+  let stopped = false;
+  const ring = () => {
+    if (stopped) return;
+    [0, 0.5].forEach((off) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.frequency.value = 440;
+      const o2 = ctx.createOscillator();
+      o2.frequency.value = 480;
+      g.gain.value = 0.15;
+      o.connect(g); o2.connect(g); g.connect(ctx.destination);
+      const t0 = ctx.currentTime + off;
+      o.start(t0); o2.start(t0); o.stop(t0 + 0.4); o2.stop(t0 + 0.4);
+    });
+    navigator.vibrate?.([800, 400, 800]);
+  };
+  ring();
+  const id = setInterval(ring, 2500);
+  return () => {
+    stopped = true;
+    clearInterval(id);
+    navigator.vibrate?.(0);
+    ctx.close().catch(() => {});
+  };
+}
 
 const FakeCallPage = () => {
-  const [selected, setSelected] = useState(CALLERS[0]);
-  const [status, setStatus] = useState<"setup" | "ringing" | "ongoing" | "ended">("setup");
+  const { t } = useLanguage();
+  const saved = (() => { try { return JSON.parse(localStorage.getItem(SAVE_KEY) ?? "null"); } catch { return null; } })();
+  const [name, setName] = useState<string>(saved?.name ?? t("fakeCall.mom"));
+  const [number, setNumber] = useState<string>(saved?.number ?? "");
+  const [delay, setDelay] = useState<number>(10);
+  const [status, setStatus] = useState<"setup" | "waiting" | "ringing" | "ongoing" | "ended">("setup");
+  const [left, setLeft] = useState(0);
   const [seconds, setSeconds] = useState(0);
+  const stopRing = useRef<() => void>(() => {});
+
+  useEffect(() => {
+    if (status !== "waiting") return;
+    if (left <= 0) { setStatus("ringing"); return; }
+    const id = setTimeout(() => setLeft((l) => l - 1), 1000);
+    return () => clearTimeout(id);
+  }, [status, left]);
+
+  useEffect(() => {
+    if (status === "ringing") stopRing.current = startRingtone();
+    else stopRing.current();
+  }, [status]);
+
+  useEffect(() => () => stopRing.current(), []);
 
   useEffect(() => {
     if (status !== "ongoing") return;
@@ -21,37 +71,35 @@ const FakeCallPage = () => {
     return () => clearInterval(timer);
   }, [status]);
 
-  const formatTime = (s: number) => {
-    const m = Math.floor(s / 60).toString().padStart(2, "0");
-    const sec = (s % 60).toString().padStart(2, "0");
-    return `${m}:${sec}`;
-  };
+  const fmt = (s: number) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+  const delayLabel = (d: number) => (d === 0 ? t("fakeCall.now") : d < 60 ? t("fakeCall.sec", { n: d }) : t("fakeCall.min", { n: d / 60 }));
 
-  const startCall = () => {
-    setStatus("ringing");
-    setTimeout(() => {
-      setStatus("ongoing");
-      setSeconds(0);
-    }, 2000);
+  const schedule = () => {
+    const finalName = name.trim() || t("fakeCall.mom");
+    setName(finalName);
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ name: finalName, number }));
+    setSeconds(0);
+    setLeft(delay);
+    setStatus(delay === 0 ? "ringing" : "waiting");
   };
-
-  const endCall = () => setStatus("ended");
 
   if (status === "ringing") {
     return (
-      <div className="fixed inset-0 z-50 bg-gradient-to-b from-slate-900 to-slate-800 flex flex-col items-center justify-center text-center p-6 animate-in fade-in duration-300">
-        <p className="text-white/70 text-sm uppercase tracking-wider mb-4">Incoming Call</p>
-        <div className="w-24 h-24 rounded-full bg-white/10 flex items-center justify-center mb-4 animate-bounce">
-          <User className="w-12 h-12 text-white" />
+      <div className="fixed inset-0 z-50 bg-foreground flex flex-col items-center justify-between py-16 px-6 text-center text-background animate-in fade-in duration-300">
+        <div>
+          <p className="opacity-70 text-sm uppercase tracking-wider mb-6">{t("fakeCall.incoming")}</p>
+          <div className="w-28 h-28 rounded-full bg-background/10 flex items-center justify-center mx-auto mb-5 animate-pulse">
+            <User className="w-14 h-14" />
+          </div>
+          <h2 className="text-4xl font-bold mb-1">{name}</h2>
+          <p className="opacity-60 text-lg">{number || t("fakeCall.mobile")}</p>
         </div>
-        <h2 className="text-4xl font-bold text-white mb-1">{selected.name}</h2>
-        <p className="text-white/60 text-lg">{selected.number}</p>
-        <div className="flex gap-6 mt-12">
-          <button onClick={endCall} className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center shadow-lg active:scale-95 transition-transform">
-            <PhoneOff className="w-7 h-7 text-white" />
+        <div className="flex gap-16">
+          <button aria-label="Decline" onClick={() => setStatus("ended")} className="w-16 h-16 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-lg active:scale-95">
+            <PhoneOff className="w-7 h-7" />
           </button>
-          <button onClick={() => setStatus("ongoing")} className="w-16 h-16 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg active:scale-95 transition-transform">
-            <Phone className="w-7 h-7 text-white" />
+          <button aria-label="Answer" onClick={() => setStatus("ongoing")} className="w-16 h-16 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center shadow-lg active:scale-95 animate-bounce">
+            <Phone className="w-7 h-7" />
           </button>
         </div>
       </div>
@@ -60,18 +108,16 @@ const FakeCallPage = () => {
 
   if (status === "ongoing") {
     return (
-      <div className="fixed inset-0 z-50 bg-gradient-to-b from-slate-900 to-slate-800 flex flex-col items-center justify-between py-12 px-6 animate-in fade-in duration-300">
+      <div className="fixed inset-0 z-50 bg-foreground text-background flex flex-col items-center justify-between py-12 px-6 animate-in fade-in duration-300">
         <div className="text-center space-y-2">
-          <p className="text-white/70 text-sm uppercase tracking-wider">Ongoing Call</p>
-          <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center mx-auto">
-            <User className="w-10 h-10 text-white" />
-          </div>
-          <h2 className="text-3xl font-bold text-white">{selected.name}</h2>
-          <p className="text-white/60 text-sm">{selected.number}</p>
+          <p className="opacity-70 text-sm uppercase tracking-wider">{t("fakeCall.ongoing")}</p>
+          <div className="w-20 h-20 rounded-full bg-background/10 flex items-center justify-center mx-auto"><User className="w-10 h-10" /></div>
+          <h2 className="text-3xl font-bold">{name}</h2>
+          <p className="opacity-60 text-sm">{number || t("fakeCall.mobile")}</p>
         </div>
-        <div className="text-white/80 text-3xl font-mono tabular-nums">{formatTime(seconds)}</div>
-        <button onClick={endCall} className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center shadow-lg active:scale-95 transition-transform">
-          <PhoneOff className="w-7 h-7 text-white" />
+        <div className="opacity-80 text-3xl font-mono tabular-nums">{fmt(seconds)}</div>
+        <button aria-label="End call" onClick={() => setStatus("ended")} className="w-16 h-16 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-lg active:scale-95">
+          <PhoneOff className="w-7 h-7" />
         </button>
       </div>
     );
@@ -79,13 +125,14 @@ const FakeCallPage = () => {
 
   if (status === "ended") {
     return (
-      <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center text-center p-6">
-        <PhoneOff className="w-12 h-12 text-white/50 mb-4" />
-        <p className="text-white text-lg font-semibold">Call Ended</p>
-        <p className="text-white/70 text-sm mt-2">Duration {formatTime(seconds)}</p>
-        <Link to="/dashboard" className="mt-8">
-          <Button variant="secondary">Back to Dashboard</Button>
-        </Link>
+      <div className="fixed inset-0 z-50 bg-foreground text-background flex flex-col items-center justify-center text-center p-6">
+        <PhoneOff className="w-12 h-12 opacity-50 mb-4" />
+        <p className="text-lg font-semibold">{t("fakeCall.ended")}</p>
+        <p className="opacity-70 text-sm mt-2">{t("fakeCall.duration", { time: fmt(seconds) })}</p>
+        <div className="flex gap-3 mt-8">
+          <Button variant="secondary" onClick={() => setStatus("setup")}>{t("fakeCall.title")}</Button>
+          <Link to="/dashboard"><Button variant="secondary">{t("fakeCall.back")}</Button></Link>
+        </div>
       </div>
     );
   }
@@ -95,46 +142,59 @@ const FakeCallPage = () => {
       <header className="bg-gradient-trust text-secondary-foreground">
         <div className="container py-6">
           <Link to="/dashboard" className="inline-flex items-center gap-2 text-sm opacity-90 mb-3">
-            <ArrowLeft className="w-4 h-4" /> Back
+            <ArrowLeft className="w-4 h-4" /> {t("common.back")}
           </Link>
-          <h1 className="text-2xl font-bold">Fake Call</h1>
-          <p className="text-sm opacity-80 mt-1">Simulate an incoming call to distract a threat.</p>
+          <h1 className="text-2xl font-bold">{t("fakeCall.title")}</h1>
+          <p className="text-sm opacity-80 mt-1">{t("fakeCall.sub")}</p>
         </div>
       </header>
 
-      <main className="container py-6 space-y-4">
-        <div className="space-y-2">
-          {CALLERS.map((c) => (
-            <button
-              key={c.name}
-              onClick={() => setSelected(c)}
-              className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition ${
-                selected.name === c.name
-                  ? "bg-card border-secondary shadow-card"
-                  : "bg-transparent border-border hover:bg-card"
-              }`}
-            >
-              <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center font-bold text-secondary text-sm">
-                {c.name[0]}
-              </div>
-              <div className="text-left">
-                <div className="font-semibold">{c.name}</div>
-                <div className="text-xs text-muted-foreground">{c.number}</div>
-              </div>
-            </button>
-          ))}
-        </div>
-
-        <Button onClick={startCall} className="w-full h-14 bg-gradient-emergency shadow-emergency text-base">
-          <Phone className="w-5 h-5 mr-2" /> Start Fake Call from {selected.name}
-        </Button>
-
-        <div className="p-4 bg-accent/50 rounded-2xl text-sm text-accent-foreground">
-          <div className="flex items-start gap-2">
-            <Clock className="w-4 h-4 mt-0.5 shrink-0" />
-            <p>The call screen will appear in full screen after a 2-second delay. Use this to create a plausible reason to leave an uncomfortable situation.</p>
+      <main className="container py-6 space-y-5">
+        {status === "waiting" ? (
+          <div className="bg-card border border-border rounded-2xl p-6 text-center space-y-4">
+            <Clock className="w-8 h-8 mx-auto text-secondary" />
+            <p className="text-4xl font-bold tabular-nums">{fmt(left)}</p>
+            <p className="text-sm text-muted-foreground">{t("fakeCall.scheduled", { time: fmt(left) })}</p>
+            <Button variant="outline" onClick={() => setStatus("setup")}>{t("fakeCall.cancel")}</Button>
           </div>
-        </div>
+        ) : (
+          <>
+            <section className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("fakeCall.caller")}</p>
+              <div className="flex flex-wrap gap-2">
+                {PRESETS.map((p) => (
+                  <button key={p} onClick={() => setName(t(`fakeCall.${p}`))}
+                    className={`px-4 py-2 rounded-full border text-sm ${name === t(`fakeCall.${p}`) ? "bg-secondary text-secondary-foreground border-secondary" : "border-border bg-card"}`}>
+                    {t(`fakeCall.${p}`)}
+                  </button>
+                ))}
+              </div>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("fakeCall.customName")} maxLength={40} />
+              <Input value={number} onChange={(e) => setNumber(e.target.value)} placeholder={t("fakeCall.customNumber")} inputMode="tel" maxLength={20} />
+            </section>
+
+            <section className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("fakeCall.when")}</p>
+              <div className="grid grid-cols-5 gap-2">
+                {DELAYS.map((d) => (
+                  <button key={d} onClick={() => setDelay(d)}
+                    className={`py-2 rounded-xl border text-xs font-semibold ${delay === d ? "bg-primary text-primary-foreground border-primary" : "border-border bg-card"}`}>
+                    {delayLabel(d)}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <Button onClick={schedule} className="w-full h-14 bg-gradient-emergency shadow-emergency text-base">
+              <Phone className="w-5 h-5 mr-2" /> {t("fakeCall.start")}
+            </Button>
+
+            <div className="p-4 bg-accent/50 rounded-2xl text-sm text-accent-foreground flex items-start gap-2">
+              <Clock className="w-4 h-4 mt-0.5 shrink-0" />
+              <p>{t("fakeCall.tip")}</p>
+            </div>
+          </>
+        )}
       </main>
     </div>
   );
